@@ -1,0 +1,6 @@
+{
+  "name": "Học Từ Vựng Tiếng Đức",
+  "description": "Website học từ vựng tiếng Đức thông qua trò chơi tương tác, theo dõi tiến độ và bảng xếp hạng hằng tuần.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

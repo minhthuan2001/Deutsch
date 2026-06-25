@@ -1,0 +1,86 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "User account information, level, streak, and accumulative XP",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "displayName": { "type": "string" },
+        "email": { "type": "string" },
+        "avatar": { "type": "string" },
+        "xp": { "type": "integer" },
+        "level": { "type": "integer" },
+        "streak": { "type": "integer" },
+        "wordsLearnedCount": { "type": "integer" },
+        "lastActiveDate": { "type": "string" }
+      },
+      "required": ["uid", "displayName", "email", "xp", "level", "streak"]
+    },
+    "Topic": {
+      "title": "Vocabulary Topic",
+      "description": "German vocabulary topic categorization",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "nameDe": { "type": "string" },
+        "count": { "type": "integer" },
+        "level": { "type": "string" },
+        "image": { "type": "string" },
+        "description": { "type": "string" },
+        "color": { "type": "string" }
+      },
+      "required": ["id", "name", "nameDe", "count", "level"]
+    },
+    "Word": {
+      "title": "German Vocabulary Word",
+      "description": "A single word or phrase with translations and context examples",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "topicId": { "type": "string" },
+        "german": { "type": "string" },
+        "vietnamese": { "type": "string" },
+        "type": { "type": "string" },
+        "article": { "type": "string" },
+        "plural": { "type": "string" },
+        "exampleDe": { "type": "string" },
+        "exampleVi": { "type": "string" },
+        "hint": { "type": "string" }
+      },
+      "required": ["id", "topicId", "german", "vietnamese", "type", "exampleDe", "exampleVi"]
+    },
+    "TopicProgress": {
+      "title": "Topic Progress",
+      "description": "User learning progress on a specific topic",
+      "type": "object",
+      "properties": {
+        "topicId": { "type": "string" },
+        "completed": { "type": "boolean" },
+        "xpGained": { "type": "integer" },
+        "learnedWordsCount": { "type": "integer" },
+        "lastStudied": { "type": "string" }
+      },
+      "required": ["topicId", "completed", "xpGained"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": "User",
+      "description": "User profiles and stats"
+    },
+    "users/{userId}/progress/{topicId}": {
+      "schema": "TopicProgress",
+      "description": "A user's learning progress on a specific topic"
+    },
+    "topics/{topicId}": {
+      "schema": "Topic",
+      "description": "A German vocabulary learning topic"
+    },
+    "words/{wordId}": {
+      "schema": "Word",
+      "description": "German vocabulary words and examples"
+    }
+  }
+}
