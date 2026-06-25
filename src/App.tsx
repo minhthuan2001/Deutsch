@@ -849,7 +849,7 @@ export default function App() {
           </div>
         </div>
         <div className="max-w-7xl mx-auto border-t border-slate-900 mt-8 pt-6 text-center text-xs text-slate-600 font-bold">
-          @2026 Lerne Deutsch mit Minh Thuan
+          @2026 Deutsch Lernen
         </div>
       </footer>
     </div>
