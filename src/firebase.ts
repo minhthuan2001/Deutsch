@@ -3,13 +3,13 @@ import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
-  projectId: "powerful-surfer-tlcgc",
-  appId: "1:1096593725576:web:46d526a14a31ad3a69673d",
-  apiKey: "AIzaSyBjDPYEiHcucxiWOwt9QzCTHqPTeNaVai4",
-  authDomain: "powerful-surfer-tlcgc.firebaseapp.com",
-  firestoreDatabaseId: "ai-studio-0aa1fd0d-9c6f-46f5-b974-8d815282f1cb",
-  storageBucket: "powerful-surfer-tlcgc.firebasestorage.app",
-  messagingSenderId: "1096593725576"
+projectId: "deutsch-lernen-2026",
+  appId: "1:151250677235:web:71bcfbd5343b03477fb686",
+  apiKey: "AIzaSyAgf1wZsFKpMJ_AuO-lhkgmfnG9y2t7AAk",
+  authDomain: "deutsch-lernen-2026.firebaseapp.com",
+  firestoreDatabaseId: "database-deutsch-lernen-2026",
+  storageBucket: "deutsch-lernen-2026.firebasestorage.app",
+  messagingSenderId: "151250677235"
 };
 
 const app = initializeApp(firebaseConfig);
