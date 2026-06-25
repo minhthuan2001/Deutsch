@@ -849,7 +849,7 @@ export default function App() {
           </div>
         </div>
         <div className="max-w-7xl mx-auto border-t border-slate-900 mt-8 pt-6 text-center text-xs text-slate-600 font-bold">
-          Thiết kế bởi Google AI Studio Build. Hoạt động trên môi trường Cloud Run an toàn tuyệt đối.
+          @2026 Deutsch lernen with Minh Thuận
         </div>
       </footer>
     </div>
