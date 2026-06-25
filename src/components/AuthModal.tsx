@@ -2,7 +2,9 @@ import React, { useState } from "react";
 import { auth, db } from "../firebase";
 import {
   GoogleAuthProvider,
-  signInWithPopup
+  signInWithPopup,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword
 } from "firebase/auth";
 import { doc, setDoc, getDoc } from "firebase/firestore";
 import { X, Check, AlertCircle, ShieldCheck } from "lucide-react";
@@ -13,12 +15,137 @@ interface AuthModalProps {
   onAuthSuccess: (user: any) => void;
 }
 
+const translateAuthError = (code: string) => {
+  switch (code) {
+    case "auth/email-already-in-use":
+      return "Email này đã được đăng ký bởi tài khoản khác.";
+    case "auth/invalid-email":
+      return "Địa chỉ Email không hợp lệ.";
+    case "auth/weak-password":
+      return "Mật khẩu quá yếu. Mật khẩu phải có ít nhất 6 ký tự.";
+    case "auth/wrong-password":
+      return "Mật khẩu không chính xác. Vui lòng thử lại.";
+    case "auth/user-not-found":
+      return "Tài khoản Email này chưa được đăng ký.";
+    case "auth/invalid-credential":
+      return "Thông tin đăng nhập không chính xác (Email hoặc mật khẩu sai).";
+    case "auth/popup-closed-by-user":
+      return "Cửa sổ đăng nhập Google đã bị đóng trước khi hoàn tất.";
+    default:
+      return "Có lỗi xảy ra: " + code;
+  }
+};
+
 export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalProps) {
+  const [isSignUp, setIsSignUp] = useState(false);
+  const [displayName, setDisplayName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   if (!isOpen) return null;
+
+  const handleEmailAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setSuccess(null);
+    setLoading(true);
+
+    try {
+      if (isSignUp) {
+        // Sign Up Mode
+        if (!displayName.trim()) {
+          setError("Vui lòng nhập họ và tên của bạn.");
+          setLoading(false);
+          return;
+        }
+        if (password.length < 6) {
+          setError("Mật khẩu phải có ít nhất 6 ký tự.");
+          setLoading(false);
+          return;
+        }
+        if (password !== confirmPassword) {
+          setError("Mật khẩu xác nhận không khớp.");
+          setLoading(false);
+          return;
+        }
+
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+
+        // Create profile in Firestore
+        const userDocRef = doc(db, "users", user.uid);
+        const profileData = {
+          uid: user.uid,
+          displayName: displayName.trim(),
+          email: user.email || "",
+          avatar: "🦊", // default avatar
+          xp: 150, // starting gift XP
+          level: 1,
+          streak: 1,
+          wordsLearnedCount: 0,
+          lastActiveDate: new Date().toISOString(),
+          admin: 0, // default status is user, not admin
+        };
+        await setDoc(userDocRef, profileData);
+
+        onAuthSuccess({ ...user, ...profileData });
+        setSuccess("Đăng ký tài khoản thành công!");
+      } else {
+        // Sign In Mode
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+
+        // Fetch user profile from Firestore
+        const userDocRef = doc(db, "users", user.uid);
+        const userDoc = await getDoc(userDocRef);
+
+        let profileData: any = {};
+        if (userDoc.exists()) {
+          profileData = userDoc.data();
+          if (profileData.admin === undefined) {
+            profileData.admin = 0;
+            await setDoc(userDocRef, { ...profileData, admin: 0 }, { merge: true });
+          }
+        } else {
+          // If no profile exists, construct one
+          profileData = {
+            uid: user.uid,
+            displayName: user.displayName || email.split("@")[0] || "Học viên",
+            email: user.email || "",
+            avatar: "🦊",
+            xp: 150,
+            level: 1,
+            streak: 1,
+            wordsLearnedCount: 0,
+            lastActiveDate: new Date().toISOString(),
+            admin: 0,
+          };
+          await setDoc(userDocRef, profileData);
+        }
+
+        onAuthSuccess({ ...user, ...profileData });
+        setSuccess("Đăng nhập thành công!");
+      }
+
+      setTimeout(() => {
+        onClose();
+        // Reset state
+        setDisplayName("");
+        setEmail("");
+        setPassword("");
+        setConfirmPassword("");
+      }, 1000);
+    } catch (err: any) {
+      console.error(err);
+      setError(translateAuthError(err.code || err.message));
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleGoogleSignIn = async () => {
     setError(null);
@@ -64,7 +191,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
       }, 1000);
     } catch (err: any) {
       console.error(err);
-      setError("Không thể đăng nhập bằng Google: " + (err.code === "auth/popup-closed-by-user" ? "Hộp thoại đăng nhập bị đóng." : err.message));
+      setError(translateAuthError(err.code || err.message));
     } finally {
       setLoading(false);
     }
@@ -82,14 +209,50 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
         </button>
 
         {/* Brand Header */}
-        <div className="text-center mb-8">
+        <div className="text-center mb-6">
           <span className="text-5xl block mb-3">🇩🇪</span>
           <h2 className="text-2xl font-black text-slate-800 tracking-tight font-sans">
-            Đăng Nhập Học Viện
+            {isSignUp ? "Tạo Tài Khoản" : "Đăng Nhập Học Viện"}
           </h2>
           <p className="text-slate-500 text-sm mt-1.5 leading-relaxed">
-            Đăng nhập nhanh với Google để lưu tiến trình học tập, mở rộng vốn từ và tham gia bảng xếp hạng!
+            {isSignUp
+              ? "Tham gia học viện tiếng Đức ngay hôm nay để lưu lịch sử và rèn luyện từ vựng mỗi ngày."
+              : "Đăng nhập để tiếp tục bài học của bạn và theo dõi bảng xếp hạng!"}
           </p>
+        </div>
+
+        {/* Switch mode */}
+        <div className="flex border border-slate-100 p-1 bg-slate-50 rounded-2xl mb-6">
+          <button
+            type="button"
+            onClick={() => {
+              setIsSignUp(false);
+              setError(null);
+              setSuccess(null);
+            }}
+            className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${
+              !isSignUp
+                ? "bg-white text-slate-800 shadow-sm"
+                : "text-slate-400 hover:text-slate-600"
+            }`}
+          >
+            Đăng Nhập
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setIsSignUp(true);
+              setError(null);
+              setSuccess(null);
+            }}
+            className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${
+              isSignUp
+                ? "bg-white text-slate-800 shadow-sm"
+                : "text-slate-400 hover:text-slate-600"
+            }`}
+          >
+            Đăng Ký
+          </button>
         </div>
 
         {/* Feedback Messages */}
@@ -105,6 +268,89 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
             <span>{success}</span>
           </div>
         )}
+
+        {/* Email/Password Auth Form */}
+        <form onSubmit={handleEmailAuth} className="space-y-4 mb-6">
+          {isSignUp && (
+            <div>
+              <label className="block text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wider">
+                Họ và Tên
+              </label>
+              <input
+                type="text"
+                required
+                placeholder="Nguyễn Văn A"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                className="w-full border border-slate-200 focus:border-slate-400 focus:outline-none p-3.5 rounded-2xl text-sm transition placeholder-slate-300"
+              />
+            </div>
+          )}
+
+          <div>
+            <label className="block text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wider">
+              Địa chỉ Email
+            </label>
+            <input
+              type="email"
+              required
+              placeholder="email@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full border border-slate-200 focus:border-slate-400 focus:outline-none p-3.5 rounded-2xl text-sm transition placeholder-slate-300"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wider">
+              Mật khẩu
+            </label>
+            <input
+              type="password"
+              required
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full border border-slate-200 focus:border-slate-400 focus:outline-none p-3.5 rounded-2xl text-sm transition placeholder-slate-300"
+            />
+          </div>
+
+          {isSignUp && (
+            <div>
+              <label className="block text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wider">
+                Xác nhận mật khẩu
+              </label>
+              <input
+                type="password"
+                required
+                placeholder="••••••••"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="w-full border border-slate-200 focus:border-slate-400 focus:outline-none p-3.5 rounded-2xl text-sm transition placeholder-slate-300"
+              />
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold p-3.5 rounded-2xl tracking-wide transition text-sm flex items-center justify-center shadow-sm disabled:opacity-50"
+          >
+            {loading ? (
+              <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+            ) : (
+              <span>{isSignUp ? "Đăng Ký Tài Khoản" : "Đăng Nhập"}</span>
+            )}
+          </button>
+        </form>
+
+        {/* Separator */}
+        <div className="relative flex items-center justify-center my-6">
+          <div className="absolute inset-x-0 border-t border-slate-100"></div>
+          <span className="relative px-3 bg-white text-xs font-bold text-slate-400 uppercase tracking-wider">
+            Hoặc
+          </span>
+        </div>
 
         {/* Google Sign In Button */}
         <button

@@ -109,7 +109,8 @@ export default function Dashboard({
 
   // JSON Export states
   const [exportOutput, setExportOutput] = useState("");
-  const [exportType, setExportType] = useState<"topics" | "words">("topics");
+  const [exportType, setExportType] = useState<"topics" | "words" | "words_by_topic">("topics");
+  const [exportSelectedTopicId, setExportSelectedTopicId] = useState("");
   const [copiedExport, setCopiedExport] = useState(false);
 
   // Vocabulary Deletion States
@@ -117,7 +118,7 @@ export default function Dashboard({
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deleteWordStatus, setDeleteWordStatus] = useState<{success?: boolean; msg?: string} | null>(null);
 
-  const handleExportData = (type: "topics" | "words") => {
+  const handleExportData = (type: "topics" | "words" | "words_by_topic", targetTopicId?: string) => {
     setExportType(type);
     if (type === "topics") {
       const cleanTopics = topicsList.map(t => ({
@@ -131,8 +132,24 @@ export default function Dashboard({
         color: t.color
       }));
       setExportOutput(JSON.stringify(cleanTopics, null, 2));
-    } else {
+    } else if (type === "words") {
       const cleanWords = wordsList.map(w => ({
+        id: w.id,
+        topicId: w.topicId,
+        german: w.german,
+        vietnamese: w.vietnamese,
+        type: w.type,
+        article: w.article,
+        plural: w.plural,
+        exampleDe: w.exampleDe,
+        exampleVi: w.exampleVi,
+        hint: w.hint
+      }));
+      setExportOutput(JSON.stringify(cleanWords, null, 2));
+    } else if (type === "words_by_topic") {
+      const tid = targetTopicId || exportSelectedTopicId;
+      const filteredWords = wordsList.filter(w => w.topicId === tid);
+      const cleanWords = filteredWords.map(w => ({
         id: w.id,
         topicId: w.topicId,
         german: w.german,
@@ -1263,36 +1280,75 @@ export default function Dashboard({
                     Sao chép toàn bộ danh sách chủ đề hoặc từ vựng hiện có dưới dạng cấu trúc JSON để dễ dàng sao lưu, chỉnh sửa, hoặc đồng bộ hóa.
                   </p>
 
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handleExportData("topics")}
-                      className={`flex-1 font-bold py-2 px-3 rounded-xl text-xs transition border ${
-                        exportType === "topics" && exportOutput
-                          ? "bg-emerald-600 border-emerald-600 text-white shadow-sm"
-                          : "bg-emerald-50 border-emerald-100 text-emerald-700 hover:bg-emerald-100"
-                      }`}
-                    >
-                      Xuất {topicsList.length} Chủ Đề 📚
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleExportData("words")}
-                      className={`flex-1 font-bold py-2 px-3 rounded-xl text-xs transition border ${
-                        exportType === "words" && exportOutput
-                          ? "bg-sky-600 border-sky-600 text-white shadow-sm"
-                          : "bg-sky-50 border-sky-100 text-sky-700 hover:bg-sky-100"
-                      }`}
-                    >
-                      Xuất {wordsList.length} Từ Vựng 📝
-                    </button>
+                  <div className="flex flex-col gap-3">
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleExportData("topics")}
+                        className={`flex-1 font-bold py-2.5 px-3 rounded-xl text-xs transition border ${
+                          exportType === "topics" && exportOutput
+                            ? "bg-emerald-600 border-emerald-600 text-white shadow-sm"
+                            : "bg-emerald-50 border-emerald-100 text-emerald-700 hover:bg-emerald-100"
+                        }`}
+                      >
+                        Xuất {topicsList.length} Chủ Đề 📚
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleExportData("words")}
+                        className={`flex-1 font-bold py-2.5 px-3 rounded-xl text-xs transition border ${
+                          exportType === "words" && exportOutput
+                            ? "bg-sky-600 border-sky-600 text-white shadow-sm"
+                            : "bg-sky-50 border-sky-100 text-sky-700 hover:bg-sky-100"
+                        }`}
+                      >
+                        Xuất Tất Cả Từ Vựng 📝
+                      </button>
+                    </div>
+
+                    <div className="border border-slate-100 p-3.5 rounded-2xl bg-slate-50 space-y-2.5">
+                      <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">
+                        Hoặc xuất từ vựng theo chủ đề đã chọn:
+                      </label>
+                      <div className="flex gap-2">
+                        <select
+                          value={exportSelectedTopicId}
+                          onChange={(e) => {
+                            setExportSelectedTopicId(e.target.value);
+                            if (e.target.value) {
+                              handleExportData("words_by_topic", e.target.value);
+                            }
+                          }}
+                          className="flex-1 border border-slate-200 focus:border-slate-400 focus:outline-none p-2 rounded-xl text-xs transition bg-white"
+                        >
+                          <option value="">-- Chọn Chủ Đề --</option>
+                          {topicsList.map(topic => (
+                            <option key={topic.id} value={topic.id}>
+                              {topic.name} ({topic.nameDe})
+                            </option>
+                          ))}
+                        </select>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (exportSelectedTopicId) {
+                              handleExportData("words_by_topic", exportSelectedTopicId);
+                            }
+                          }}
+                          disabled={!exportSelectedTopicId}
+                          className="font-bold py-2 px-3.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white rounded-xl text-xs transition shadow-sm"
+                        >
+                          Xuất 📤
+                        </button>
+                      </div>
+                    </div>
                   </div>
 
                   {exportOutput && (
                     <div className="space-y-2 pt-1 animate-fade-in">
                       <div className="flex items-center justify-between">
                         <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">
-                          Dữ liệu JSON ({exportType === "topics" ? "Chủ đề" : "Từ vựng"})
+                          Dữ liệu JSON ({exportType === "topics" ? "Chủ đề" : exportType === "words" ? "Tất cả từ vựng" : "Từ vựng theo chủ đề"})
                         </span>
                         <button
                           type="button"
